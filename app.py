@@ -261,9 +261,11 @@ def api_live():
 
     return jsonify(result)
 
+# Start MQTT worker when the app is loaded by Gunicorn/Render
+threading.Thread(target=mqtt_worker, daemon=True).start()
+
 
 if __name__ == "__main__":
-    threading.Thread(target=mqtt_worker, daemon=True).start()
 
     print("==============================================")
     print(" WEHARK TRAIN COACH WATER LEVEL")
