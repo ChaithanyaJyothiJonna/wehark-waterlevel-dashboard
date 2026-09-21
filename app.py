@@ -101,7 +101,8 @@ def on_connect(client, userdata, flags, rc):
         print("Broker :", MQTT_BROKER)
         print("Topic  :", MQTT_TOPIC)
         print("==============================================")
-        client.subscribe(MQTT_TOPIC, qos=1)
+        result, mid = client.subscribe(MQTT_TOPIC, qos=0)
+        print("Subscribe result:", result, "MID:", mid)
         print("Subscribed successfully")
     else:
         print("MQTT connection failed:", rc)
@@ -112,16 +113,26 @@ def on_disconnect(client, userdata, rc):
 
 
 def on_message(client, userdata, msg):
+    print("==============================================")
+    print("MQTT MESSAGE RECEIVED")
+    print("Topic :", msg.topic)
+    print("Payload :", msg.payload.decode("utf-8"))
+    print("==============================================")
+
     try:
-        payload = msg.payload.decode("utf-8")
-        print("MQTT RECEIVED:", payload)
-        apply_payload(json.loads(payload), source="MQTT")
+        data = json.loads(msg.payload.decode("utf-8"))
+        updated = apply_payload(data, source="MQTT")
+        print("Updated coaches :", updated)
+
     except Exception as exc:
-        print("MQTT DATA ERROR:", exc)
+        print("MQTT MESSAGE ERROR :", exc)
 
 
 def mqtt_worker():
-    client = mqtt.Client()
+    client = mqtt.Client(
+        client_id="wehark-render-dashboard"
+    )
+
     client.on_connect = on_connect
     client.on_disconnect = on_disconnect
     client.on_message = on_message
@@ -130,9 +141,13 @@ def mqtt_worker():
         try:
             print("Connecting to MQTT...")
             client.connect(MQTT_BROKER, MQTT_PORT, 60)
+
+            print("Starting MQTT loop...")
             client.loop_forever()
+
         except Exception as exc:
             print("MQTT ERROR:", exc)
+            print("Retrying MQTT connection in 5 seconds...")
             time.sleep(5)
 
 
