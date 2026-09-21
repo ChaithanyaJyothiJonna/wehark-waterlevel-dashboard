@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WeHark | Train Water Level Monitoring</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header class="header">
+    <div class="brand">
+        <div class="logo">W</div>
+        <div>
+            <h1>WeHark Solutions</h1>
+            <p>Train Coach Water Level Monitoring</p>
+        </div>
+    </div>
+
+    <nav class="nav">
+        <button class="nav-btn active" data-page="dashboard">Dashboard</button>
+        <button class="nav-btn" data-page="train">Train Rake</button>
+        <button class="nav-btn" data-page="coaches">Coaches</button>
+        <button class="nav-btn" data-page="alerts">Alerts</button>
+        <button class="nav-btn" data-page="settings">⚙ Settings</button>
+    </nav>
+
+    <div class="header-right">
+        <div id="mqttStatus" class="mqtt-status offline">
+            <span class="dot"></span>
+            <span id="mqttText">MQTT OFFLINE</span>
+        </div>
+        <div class="clock">
+            <span id="date">--</span>
+            <strong id="time">--:--:--</strong>
+        </div>
+    </div>
+</header>
+
+<main class="main">
+
+<section id="page-dashboard" class="page active">
+    <div class="title-row">
+        <div>
+            <h2>Dashboard</h2>
+            <p>Live water-level monitoring</p>
+        </div>
+        <div class="legend">
+            <span><i class="green-dot"></i> Normal</span>
+            <span><i class="yellow-dot"></i> Low ≤ <span id="legendThreshold">40</span>%</span>
+            <span><i class="red-dot"></i> No data</span>
+        </div>
+    </div>
+
+    <section class="summary">
+        <div class="summary-card">
+            <span>Average Water Level</span>
+            <b id="averageWater">0%</b>
+            <small>Average of active coaches</small>
+        </div>
+        <div class="summary-card">
+            <span>Active Coaches</span>
+            <b id="activeCount">0 / 8</b>
+            <small>Receiving live data</small>
+        </div>
+        <div class="summary-card warning">
+            <span>Low Water</span>
+            <b id="lowCount">0</b>
+            <small>At configured threshold</small>
+        </div>
+        <div class="summary-card">
+            <span>Packet Counter</span>
+            <b id="counter">0</b>
+            <small>Latest ESP32 packet</small>
+        </div>
+    </section>
+
+    <section class="train-panel">
+        <div class="train-top">
+            <div>
+                <h3>Live Train Layout</h3>
+                <p>Coach position view</p>
+            </div>
+            <div class="update">Last update: <strong id="lastUpdate">--</strong></div>
+        </div>
+        <div class="track-area">
+            <div class="rail rail-one"></div>
+            <div class="rail rail-two"></div>
+            <div class="sleepers"></div>
+            <div id="trainLayout" class="train-layout"></div>
+        </div>
+    </section>
+</section>
+
+<section id="page-train" class="page">
+    <div class="page-heading">
+        <div><h2>Train Rake</h2><p>Live rake overview and coach sequence</p></div>
+        <span class="pill">8 COACHES</span>
+    </div>
+    <div class="rake-card">
+        <div id="rakeList" class="rake-list"></div>
+    </div>
+</section>
+
+<section id="page-coaches" class="page">
+    <div class="page-heading">
+        <div><h2>Coach Details</h2><p>Water, battery and health information</p></div>
+    </div>
+    <div id="detailGrid" class="detail-grid"></div>
+</section>
+
+<section id="page-alerts" class="page">
+    <div class="page-heading">
+        <div><h2>Alerts</h2><p>Low-water and system conditions</p></div>
+    </div>
+    <div id="alertsList" class="alerts-list"></div>
+</section>
+
+<section id="page-settings" class="page">
+    <div class="page-heading">
+        <div>
+            <h2>System Settings</h2>
+            <p>Configuration based on the uploaded WLI specification</p>
+        </div>
+        <button id="saveSettings" class="primary-btn">Save Settings</button>
+    </div>
+
+    <div class="settings-grid">
+
+        <div class="settings-card">
+            <h3>System Configuration</h3>
+            <label>System Name<input id="system_name" type="text"></label>
+            <div class="two-col">
+                <label>Low Water Limit (%)<input id="low_threshold" type="number" min="0" max="100"></label>
+                <label>Empty Tank (%)<input id="empty_threshold" type="number" min="0" max="100"></label>
+            </div>
+            <div class="two-col">
+                <label>Demo Reporting Interval (sec)<input id="demo_reporting_interval" type="number" min="1"></label>
+                <label>Target Reporting Interval (min)<input id="target_reporting_interval" type="number" min="1"></label>
+            </div>
+            <label>Dashboard Refresh (sec)<input id="dashboard_refresh" type="number" min="1"></label>
+            <p class="note">The current ESP32 demo publishes every 1 second. The specification describes a 15-minute reporting cycle.</p>
+        </div>
+
+        <div class="settings-card">
+            <h3>Alert Configuration</h3>
+            <div class="switch-row"><span>Low Water Alert</span><input id="alert_low_water" type="checkbox"></div>
+            <div class="switch-row"><span>Empty Tank Alert</span><input id="alert_empty_tank" type="checkbox"></div>
+            <div class="switch-row"><span>Sensor Fault Alert</span><input id="alert_sensor_fault" type="checkbox"></div>
+            <div class="switch-row"><span>MPU Offline Alert</span><input id="alert_mpu_offline" type="checkbox"></div>
+            <div class="switch-row"><span>Low Battery Alert</span><input id="alert_low_battery" type="checkbox"></div>
+            <div class="two-col">
+                <label>Critical Water (%)<input id="critical_water" type="number" min="0" max="100"></label>
+                <label>Low Battery (%)<input id="low_battery" type="number" min="0" max="100"></label>
+            </div>
+            <label>Critical Battery (%)<input id="critical_battery" type="number" min="0" max="100"></label>
+        </div>
+
+        <div class="settings-card">
+            <h3>Sensor Configuration</h3>
+            <div class="info-row"><span>Sensor Type</span><b>Hydrostatic Pressure Sensor</b></div>
+            <div class="info-row"><span>Measurement Range</span><b>0 – 1 m water column</b></div>
+            <div class="info-row"><span>Accuracy</span><b>99%</b></div>
+            <div class="info-row"><span>Response Time</span><b>~500 ms</b></div>
+            <div class="info-row"><span>Mapping</span><b>Raw sensor → Water %</b></div>
+            <div class="calibration-box">
+                <span>Calibration is represented here as configuration/display; actual sensor calibration remains in the MPU.</span>
+                <button class="secondary-btn" onclick="showCalibration()">Sensor Calibration</button>
+            </div>
+        </div>
+
+        <div class="settings-card">
+            <h3>GPS / Location</h3>
+            <div class="info-row"><span>GPS Status</span><b id="gpsStatus">DEMO</b></div>
+            <div class="info-row"><span>Latitude</span><b>17.385000</b></div>
+            <div class="info-row"><span>Longitude</span><b>78.486700</b></div>
+            <label>Sleep after same location (hours)<input id="sleep_after_same_location_hours" type="number" min="1"></label>
+            <p class="note">The specification describes a sleep-mode condition when GPS location remains unchanged for more than 6 hours.</p>
+        </div>
+
+        <div class="settings-card">
+            <h3>Battery Configuration</h3>
+            <div class="info-row"><span>Supported Type</span><b>LiFePO4 / Li-SOCl2</b></div>
+            <div class="info-row"><span>Reference Capacity</span><b>Minimum 48 Ah</b></div>
+            <div class="info-row"><span>Expected Service</span><b>6 months without recharge/exchange</b></div>
+            <label>Low Battery Limit (%)<input id="low_battery_copy" type="number" min="0" max="100"></label>
+        </div>
+
+        <div class="settings-card">
+            <h3>Communication</h3>
+            <div class="info-row"><span>Protocol</span><b>MQTT</b></div>
+            <div class="info-row"><span>Broker</span><b>broker.hivemq.com</b></div>
+            <div class="info-row"><span>Port</span><b>1883</b></div>
+            <div class="info-row"><span>Topic</span><b>wehark/waterlevel/live</b></div>
+            <div class="info-row"><span>QoS</span><b>1</b></div>
+            <p class="note">These are the current demo communication settings. Production railway deployment should use the authorised server/security arrangement.</p>
+        </div>
+
+    </div>
+
+    <div class="settings-card coach-config">
+        <h3>Coach / MPU Configuration</h3>
+        <div class="config-table">
+            <div class="table-head"><span>Position</span><span>Coach</span><span>MPU ID</span><span>State</span><span>Action</span></div>
+            <div id="coachConfigRows"></div>
+        </div>
+    </div>
+
+    <div class="settings-card maintenance-card">
+        <div class="maintenance-heading">
+            <div><h3>Maintenance</h3><p>Service and health record for each coach</p></div>
+            <select id="maintenanceCoach"></select>
+        </div>
+        <div id="maintenanceForm" class="maintenance-form"></div>
+    </div>
+
+    <div id="saveMessage" class="save-message"></div>
+</section>
+
+<footer>
+    MQTT: <strong>wehark/waterlevel/live</strong>
+    <span>•</span>
+    Broker: <strong>broker.hivemq.com</strong>
+    <span>•</span>
+    WLI monitoring prototype
+</footer>
+
+</main>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
