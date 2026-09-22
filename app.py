@@ -113,7 +113,6 @@ def on_disconnect(client, userdata, rc):
     print("MQTT DISCONNECTED")
     print("Return code:", rc)
     print("==============================================")
-    print("MQTT DISCONNECTED:", rc)
 
 
 def on_message(client, userdata, msg):
@@ -133,6 +132,10 @@ def on_message(client, userdata, msg):
 
 
 def mqtt_worker():
+    print("==============================================")
+    print("MQTT WORKER STARTED")
+    print("==============================================")
+
     client = mqtt.Client(
         client_id="wehark-render-dashboard"
     )
