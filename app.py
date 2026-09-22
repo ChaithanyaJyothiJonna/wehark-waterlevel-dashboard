@@ -109,6 +109,10 @@ def on_connect(client, userdata, flags, rc):
 
 
 def on_disconnect(client, userdata, rc):
+    print("==============================================")
+    print("MQTT DISCONNECTED")
+    print("Return code:", rc)
+    print("==============================================")
     print("MQTT DISCONNECTED:", rc)
 
 
@@ -146,9 +150,11 @@ def mqtt_worker():
             client.loop_forever()
 
         except Exception as exc:
-            print("MQTT ERROR:", exc)
-            print("Retrying MQTT connection in 5 seconds...")
-            time.sleep(5)
+         print("==============================================")
+         print("MQTT ERROR:", repr(exc))
+         print("Retrying MQTT connection in 5 seconds...")
+         print("==============================================")
+         time.sleep(5)
 
 
 settings = {
