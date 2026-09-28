@@ -3,6 +3,7 @@ import paho.mqtt.client as mqtt
 import threading
 import json
 import time
+import random
 from datetime import datetime
 
 app = Flask(__name__)
@@ -13,6 +14,9 @@ MQTT_PORT = 1883
 MQTT_TOPIC = "wehark/waterlevel/live"
 
 LOW_THRESHOLD = 40
+# Dashboard shows MQTT ONLINE if a packet arrived within this many seconds.
+# Use ~60 for the demo; use ~1800 (30 min) for the 15-minute reporting cycle.
+ONLINE_TIMEOUT = 60
 COACHES = ["S1", "S2", "S3", "S4", "S5", "A1", "B1", "B2"]
 
 lock = threading.Lock()
@@ -101,7 +105,7 @@ def on_connect(client, userdata, flags, rc):
         print("Broker :", MQTT_BROKER)
         print("Topic  :", MQTT_TOPIC)
         print("==============================================")
-        result, mid = client.subscribe(MQTT_TOPIC, qos=0)
+        result, mid = client.subscribe(MQTT_TOPIC, qos=1)
         print("Subscribe result:", result, "MID:", mid)
         print("Subscribed successfully")
     else:
@@ -119,7 +123,7 @@ def on_message(client, userdata, msg):
     print("==============================================")
     print("MQTT MESSAGE RECEIVED")
     print("Topic :", msg.topic)
-    print("Payload :", msg.payload.decode("utf-8"))
+    print("Payload :", msg.payload.decode("utf-8", errors="replace"))
     print("==============================================")
 
     try:
@@ -131,21 +135,29 @@ def on_message(client, userdata, msg):
         print("MQTT MESSAGE ERROR :", exc)
 
 
+def make_client():
+    """Create an MQTT client that works with paho-mqtt 1.x and 2.x."""
+    client_id = "wehark-render-dashboard-%04x" % random.randint(0, 0xFFFF)
+    try:
+        # paho-mqtt 2.x
+        return mqtt.Client(mqtt.CallbackAPIVersion.VERSION1, client_id=client_id)
+    except AttributeError:
+        # paho-mqtt 1.x
+        return mqtt.Client(client_id=client_id)
+
+
 def mqtt_worker():
     print("==============================================")
     print("MQTT WORKER STARTED")
     print("==============================================")
 
-    client = mqtt.Client(
-        client_id="wehark-render-dashboard"
-    )
-
-    client.on_connect = on_connect
-    client.on_disconnect = on_disconnect
-    client.on_message = on_message
-
     while True:
         try:
+            client = make_client()
+            client.on_connect = on_connect
+            client.on_disconnect = on_disconnect
+            client.on_message = on_message
+
             print("Connecting to MQTT...")
             client.connect(MQTT_BROKER, MQTT_PORT, 60)
 
@@ -153,11 +165,11 @@ def mqtt_worker():
             client.loop_forever()
 
         except Exception as exc:
-         print("==============================================")
-         print("MQTT ERROR:", repr(exc))
-         print("Retrying MQTT connection in 5 seconds...")
-         print("==============================================")
-         time.sleep(5)
+            print("==============================================")
+            print("MQTT ERROR:", repr(exc))
+            print("Retrying MQTT connection in 5 seconds...")
+            print("==============================================")
+            time.sleep(5)
 
 
 settings = {
@@ -267,7 +279,7 @@ def api_live():
         result = json.loads(json.dumps(live_data))
 
     age = time.time() - last_message_time if last_message_time else 999
-    result["online"] = age <= 5
+    result["online"] = age <= ONLINE_TIMEOUT
     result["age"] = round(age, 1)
 
     levels = [
