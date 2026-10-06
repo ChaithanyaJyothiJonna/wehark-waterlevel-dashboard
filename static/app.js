@@ -74,8 +74,8 @@ function updateDashboard(data) {
 
     const mqttStatus = document.getElementById("mqttStatus");
     const mqttText = document.getElementById("mqttText");
-    mqttStatus.className = data.online ? "mqtt-status online" : "mqtt-status offline";
-    mqttText.innerText = data.online ? "MQTT ONLINE" : "MQTT OFFLINE";
+    if (mqttStatus) mqttStatus.className = data.online ? "mqtt-status online" : "mqtt-status offline";
+    if (mqttText) mqttText.innerText = data.online ? "MQTT ONLINE" : "MQTT OFFLINE";
 
     data.coaches.forEach(c => {
         const name = c.coach;

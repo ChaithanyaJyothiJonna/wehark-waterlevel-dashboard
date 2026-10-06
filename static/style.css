@@ -78,7 +78,7 @@ body {
     font-weight: 800;
 }
 
-.mqtt-status.online {
+.-status.online {
     color: #62e5a5;
     background: rgba(43,209,125,.1);
     border: 1px solid rgba(43,209,125,.4);
